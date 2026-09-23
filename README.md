@@ -11,12 +11,14 @@ UI: a URL field + `Install` + `Delete`.
 
 ## Download (no install needed)
 
-Grab `webapp-maker` from the [Releases](../../releases) page, then:
+Grab `webapp-maker`, `install.sh`, and `icon.svg` from the
+[Releases](../../releases) page, then:
 
 ```bash
-chmod +x webapp-maker
-./webapp-maker
+./install.sh   # installs to ~/.local/bin + adds "WebApp Maker" to your app menu
 ```
+
+Just want the portable binary? `chmod +x webapp-maker && ./webapp-maker`.
 
 Linux only. Requires Chromium (or Chrome/Brave/Edge) for `--app` windows;
 falls back to `xdg-open` otherwise.
@@ -49,15 +51,15 @@ One file, ~90 MB, no Python/pip needed to run it.
 Pushing a `v*` tag builds it automatically via `.github/workflows/release.yml`
 and attaches it to the GitHub Release.
 
-## Upload to GitHub
+## Install to app menu (from source)
 
 ```bash
-git init
-git add .
-git commit -m "webapp maker"
-gh repo create webapp-maker --public --source=. --push
-git tag v0.1.0 && git push --tags   # triggers the binary build
+./install.sh                # binary -> ~/.local/bin, menu entry + icon
+./install.sh --uninstall    # removes all three again
 ```
+
+`install.sh` uses `dist/webapp-maker` (build it first, see above), or a
+`webapp-maker` binary sitting next to it.
 
 ## System Qt colors
 

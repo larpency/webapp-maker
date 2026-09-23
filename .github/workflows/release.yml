@@ -37,14 +37,29 @@ jobs:
           test -f ~/.local/share/applications/webapp-example-com.desktop
           ./dist/webapp-maker --delete example.com
 
+      - name: Test installer
+        run: |
+          cp dist/webapp-maker ./webapp-maker
+          ./install.sh
+          test -f ~/.local/share/applications/webapp-maker.desktop
+          test -x ~/.local/bin/webapp-maker
+          ./install.sh --uninstall
+          test ! -f ~/.local/share/applications/webapp-maker.desktop
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: webapp-maker-linux
-          path: dist/webapp-maker
+          path: |
+            dist/webapp-maker
+            install.sh
+            icon.svg
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/webapp-maker
+          files: |
+            dist/webapp-maker
+            install.sh
+            icon.svg
