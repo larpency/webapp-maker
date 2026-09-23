@@ -12,6 +12,13 @@ UI: a URL field + `Install` + `Delete`.
 App names are cleaned up automatically: `github.com` → **GitHub**,
 `youtube.com` → **YouTube**, `mail.google.com` → **Gmail**, etc.
 
+## Screenshots
+
+![Install youtube.com](screenshots/1-install-youtube.png)
+![Delete youtube.com](screenshots/2-delete-youtube.png)
+![Install github.com](screenshots/3-install-github.png)
+![Installed YouTube in the app launcher](screenshots/4-launcher.png)
+
 ## Install
 
 ```bash
