@@ -1,0 +1,9 @@
+[project]
+name = "webapp-maker"
+version = "0.1.0"
+description = "Insanely simple URL -> web app installer (Qt6)"
+requires-python = ">=3.10"
+dependencies = ["PySide6"]
+
+[tool.uv]
+managed = true
