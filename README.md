@@ -45,6 +45,12 @@ Tips: stock Firefox can do chromeless windows too — set
 `browser.ssb.enabled=true` in `about:config`, then `firefox --ssb <url>`.
 Floorp users can also use its built-in Web Apps (Floorp Hub → Web Apps).
 
+Note: installing works exactly the same whichever browser you have — same
+field, same Install button. Only the resulting window differs: Chromium
+gives a chromeless app window, Firefox keeps its normal browser UI (unless
+you enable `browser.ssb.enabled` above). Isolation, naming, Delete, and the
+launcher entry behave identically either way.
+
 Headless / scriptable (no GUI):
 
 ```bash
