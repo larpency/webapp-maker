@@ -9,21 +9,34 @@ UI: a URL field + `Install` + `Delete`.
   `chromium --app="<url>" --user-data-dir="~/.local/share/webapps/<slug>"`
 - **Delete** removes that launcher (+ icon + isolated profile).
 
-## Download (no install needed)
+App names are cleaned up automatically: `github.com` → **GitHub**,
+`youtube.com` → **YouTube**, `mail.google.com` → **Gmail**, etc.
 
-Grab `webapp-maker`, `install.sh`, and `icon.svg` from the
-[Releases](../../releases) page, then:
+## Install
 
 ```bash
-./install.sh   # installs to ~/.local/bin + adds "WebApp Maker" to your app menu
+git clone https://github.com/larpency/webapp-maker.git
+cd webapp-maker
+./install.sh
 ```
 
-Just want the portable binary? `chmod +x webapp-maker && ./webapp-maker`.
+That's it. The script copies the app to `~/.local/share/webapp-maker`,
+installs its only dependency (PySide6/Qt6 — via `uv` if you have it,
+otherwise a `venv` + `pip`), and adds **WebApp Maker** to your app menu.
+No sudo needed. Uninstall with `./install.sh --uninstall`.
 
 Linux only. Requires Chromium (or Chrome/Brave/Edge) for `--app` windows;
 falls back to `xdg-open` otherwise.
 
-## Run from source
+Headless / scriptable (no GUI):
+
+```bash
+webapp-maker --install github.com
+webapp-maker --delete github.com
+webapp-maker --name github.com   # -> GitHub
+```
+
+## Hack on it
 
 ```bash
 uv sync        # creates .venv and installs PySide6 (Qt6)
@@ -31,35 +44,6 @@ uv run main.py
 ```
 
 Requires Python 3.10+.
-
-Headless / scriptable (no GUI):
-
-```bash
-uv run main.py --install github.com
-uv run main.py --delete github.com
-uv run main.py --name github.com   # -> GitHub
-```
-
-## Build the binary yourself
-
-```bash
-uv run --with pyinstaller pyinstaller --onefile --name webapp-maker main.py
-./dist/webapp-maker --name github.com   # smoke test -> GitHub
-```
-
-One file, ~90 MB, no Python/pip needed to run it.
-Pushing a `v*` tag builds it automatically via `.github/workflows/release.yml`
-and attaches it to the GitHub Release.
-
-## Install to app menu (from source)
-
-```bash
-./install.sh                # binary -> ~/.local/bin, menu entry + icon
-./install.sh --uninstall    # removes all three again
-```
-
-`install.sh` uses `dist/webapp-maker` (build it first, see above), or a
-`webapp-maker` binary sitting next to it.
 
 ## System Qt colors
 
