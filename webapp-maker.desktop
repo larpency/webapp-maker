@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=WebApp Maker
+Comment=Turn any URL into a desktop web app
+Exec=webapp-maker
+Icon=webapp-maker
+Terminal=false
+Categories=Network;WebBrowser;
