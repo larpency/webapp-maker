@@ -52,8 +52,9 @@ APPS_DIR = Path.home() / ".local" / "share" / "applications"
 ICONS_DIR = Path.home() / ".local" / "share" / "icons"
 PROFILES_DIR = Path.home() / ".local" / "share" / "webapps"
 
-# Chromium-family browsers that support `--app=` SSB windows, in order.
-APP_MODE_BROWSERS = [
+# Chromium-family browsers support `--app=` SSB windows, in order.
+# Preferred: they give a chromeless app window with isolated data.
+CHROMIUM_BROWSERS = [
     "chromium",
     "chromium-browser",
     "google-chrome",
@@ -65,6 +66,21 @@ APP_MODE_BROWSERS = [
     "opera",
     "vivaldi",
     "vivaldi-stable",
+]
+
+# Firefox-family browsers have no reliable chromeless CLI (`--ssb` is
+# pref-gated in stock Firefox), so each web app gets its own isolated
+# profile opened with `--no-remote --new-window`.
+FIREFOX_BROWSERS = [
+    "firefox",
+    "firefox-esr",
+    "firefox-developer-edition",
+    "floorp",
+    "zen-browser",
+    "zen",
+    "librewolf",
+    "firedragon",
+    "waterfox",
 ]
 
 
@@ -362,12 +378,41 @@ def desktop_path_for_url(url: str) -> Path:
     return APPS_DIR / f"webapp-{slug_from_url(url)}.desktop"
 
 
-def find_browser() -> str | None:
-    """Return first available Chromium-family browser binary, else None."""
-    for name in APP_MODE_BROWSERS:
-        if shutil.which(name):
-            return name
-    return None
+def find_browser() -> tuple[str | None, str | None]:
+    """Return (exe path, kind) with kind 'chromium' or 'firefox'.
+
+    Chromium is preferred (chromeless `--app` windows). Firefox-family is
+    the fallback (own window + isolated profile). (None, None) if neither.
+    """
+    for name in CHROMIUM_BROWSERS:
+        exe = shutil.which(name)
+        if exe:
+            return exe, "chromium"
+    for name in FIREFOX_BROWSERS:
+        exe = shutil.which(name)
+        if exe:
+            return exe, "firefox"
+    return None, None
+
+
+def ensure_firefox_profile(exe: str, slug: str) -> bool:
+    """Pre-create the isolated Firefox profile. Returns True if usable."""
+    profile = PROFILES_DIR / slug
+    try:
+        PROFILES_DIR.mkdir(parents=True, exist_ok=True)
+        env = dict(os.environ, MOZ_HEADLESS="1")
+        subprocess.run(
+            [exe, "-CreateProfile", f"webapp-{slug} {profile}"],
+            capture_output=True,
+            timeout=60,
+            env=env,
+        )
+    except Exception:
+        return False
+    try:
+        return profile.is_dir() and any(profile.iterdir())
+    except Exception:
+        return False
 
 
 def fetch_icon(url: str, slug: str) -> str:
@@ -393,12 +438,24 @@ def fetch_icon(url: str, slug: str) -> str:
 
 
 def build_desktop_content(url: str, name: str, slug: str, icon: str) -> str:
-    browser = find_browser()
-    if browser:
+    exe, kind = find_browser()
+    wmclass = ""
+    if kind == "chromium" and exe:
         profile = PROFILES_DIR / slug
         # .desktop Exec does NOT do shell expansion, so use absolute paths.
-        exe = shutil.which(browser) or browser
         exec_line = f'{exe} --app="{url}" --user-data-dir="{profile}" --class="webapp-{slug}"'
+        wmclass = f"StartupWMClass=webapp-{slug}\n"
+    elif kind == "firefox" and exe:
+        profile = PROFILES_DIR / slug
+        try:
+            has_profile = profile.is_dir() and any(profile.iterdir())
+        except Exception:
+            has_profile = False
+        if has_profile:
+            exec_line = f'{exe} --no-remote -P "webapp-{slug}" --new-window "{url}"'
+        else:
+            # Profile creation failed; still usable, just not isolated.
+            exec_line = f'{exe} --no-remote --new-window "{url}"'
     else:
         exec_line = f"xdg-open {url}"
     return (
@@ -411,7 +468,7 @@ def build_desktop_content(url: str, name: str, slug: str, icon: str) -> str:
         f"Icon={icon}\n"
         "Terminal=false\n"
         "Categories=Network;WebBrowser;\n"
-        f"StartupWMClass=webapp-{slug}\n"
+        f"{wmclass}"
     )
 
 
@@ -422,6 +479,9 @@ def install_webapp(raw_url: str) -> Path:
     name = display_name_from_url(url)
     APPS_DIR.mkdir(parents=True, exist_ok=True)
     PROFILES_DIR.mkdir(parents=True, exist_ok=True)
+    exe, kind = find_browser()
+    if kind == "firefox" and exe:
+        ensure_firefox_profile(exe, slug)
     icon = fetch_icon(url, slug)
     desktop_file = APPS_DIR / f"webapp-{slug}.desktop"
     desktop_file.write_text(

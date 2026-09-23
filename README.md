@@ -32,8 +32,18 @@ installs its only dependency (PySide6/Qt6 — via `uv` if you have it,
 otherwise a `venv` + `pip`), and adds **WebApp Maker** to your app menu.
 No sudo needed. Uninstall with `./install.sh --uninstall`.
 
-Linux only. Requires Chromium (or Chrome/Brave/Edge) for `--app` windows;
-falls back to `xdg-open` otherwise.
+Linux only. Browser support, in order of preference:
+
+- **Chromium-family** (Chromium, Chrome, Brave, Edge, Opera, Vivaldi) —
+  chromeless app window with isolated data (`--app`, preferred).
+- **Firefox-family** (Firefox, ESR, Developer Edition, Floorp, Zen,
+  LibreWolf, FireDragon, Waterfox) — own window with an isolated profile
+  (`--no-remote -P ... --new-window`).
+- Neither found — falls back to `xdg-open`.
+
+Tips: stock Firefox can do chromeless windows too — set
+`browser.ssb.enabled=true` in `about:config`, then `firefox --ssb <url>`.
+Floorp users can also use its built-in Web Apps (Floorp Hub → Web Apps).
 
 Headless / scriptable (no GUI):
 
