@@ -596,17 +596,71 @@ class MainWindow(QWidget):
             )
 
 
+def _bundled_qt_version() -> tuple[int, ...] | None:
+    """Qt version of the bundled (wheel) Qt, e.g. (6, 11, 2)."""
+    for mod in ("PySide6.QtCore", "PyQt6.QtCore"):
+        try:
+            qversion = __import__(mod, fromlist=["qVersion"]).qVersion
+            parts = []
+            for piece in str(qversion()).split("."):
+                digits = "".join(c for c in piece if c.isdigit())
+                if not digits:
+                    break
+                parts.append(int(digits))
+            return tuple(parts) or None
+        except Exception:
+            continue
+    return None
+
+
+def _system_qt_version() -> tuple[int, ...] | None:
+    """Distro Qt6 version, e.g. (6, 11, 2). None if undetectable."""
+    import re
+
+    for qmake in ("qmake6", "qmake"):
+        try:
+            out = subprocess.run(
+                [qmake, "-query", "QT_VERSION"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if out.returncode == 0 and out.stdout.strip():
+                m = re.match(r"(\d+)\.(\d+)\.(\d+)", out.stdout.strip())
+                if m:
+                    return tuple(int(g) for g in m.groups())
+        except Exception:
+            continue
+    for base in ("/usr/lib", "/usr/lib64", "/usr/lib/x86_64-linux-gnu"):
+        path = os.path.join(base, "cmake", "Qt6", "Qt6ConfigVersion.cmake")
+        try:
+            with open(path, encoding="utf-8") as f:
+                for line in f:
+                    m = re.search(r'PACKAGE_VERSION\s+"(\d+)\.(\d+)\.(\d+)', line)
+                    if m:
+                        return tuple(int(g) for g in m.groups())
+        except Exception:
+            continue
+    return None
+
+
 def _ensure_system_qt_plugins() -> None:
     """Let pip-bundled Qt find distro style/platformtheme plugins.
 
     PySide6 wheels ship their own Qt which only knows Windows/Fusion,
     so QT_STYLE_OVERRIDE=Darkly (or Breeze/kvantum) is ignored with:
         "invalid style override ... Available styles: Windows, Fusion"
-    If the distro ships matching Qt6 plugins (e.g. /usr/lib/qt6/plugins
-    with darkly6.so, breeze6.so), expose them via QT_PLUGIN_PATH before
-    QApplication is constructed so the app uses real system Qt colors.
-    No-op when those dirs don't exist. We never force a style ourselves.
+    If the distro ships Qt6 plugins built for the SAME Qt version
+    (e.g. /usr/lib/qt6/plugins with darkly6.so, breeze6.so), expose them
+    via QT_PLUGIN_PATH before QApplication is constructed so the app uses
+    real system Qt colors. Skipped when versions differ or are unknown:
+    mixing plugin ABIs can crash on startup, and the bundled Fusion style
+    always works. We never force a style ourselves.
     """
+    bundled = _bundled_qt_version()
+    system = _system_qt_version()
+    if not bundled or not system or bundled[:3] != system[:3]:
+        return
     candidates = (
         "/usr/lib/qt6/plugins",
         "/usr/lib64/qt6/plugins",
@@ -614,9 +668,11 @@ def _ensure_system_qt_plugins() -> None:
     )
     existing = os.environ.get("QT_PLUGIN_PATH", "")
     paths = [p for p in existing.split(os.pathsep) if p]
+    seen = {os.path.realpath(p) for p in paths}
     for cand in candidates:
-        if os.path.isdir(cand) and cand not in paths:
+        if os.path.isdir(cand) and os.path.realpath(cand) not in seen:
             paths.insert(0, cand)
+            seen.add(os.path.realpath(cand))
     if paths != ([p for p in existing.split(os.pathsep) if p] if existing else []):
         os.environ["QT_PLUGIN_PATH"] = os.pathsep.join(paths)
 
